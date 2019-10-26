@@ -1,0 +1,146 @@
+version: "3"
+services:
+
+  traefik:
+    image: traefik:latest
+    container_name: traefik
+    labels:
+      - traefik.frontend.rule=Host:traefik.breakingbottles.com
+      - traefik.port=8080
+      - traefik.enable=false
+      - traefik.backend=traefik
+     - traefik.frontend.auth.basic.users=admin:$$2y$$05$$VJJiJnFrDtVeihkaD3StquFTcxPoSxCX1523eQEqcK9WrJUNaVyaK
+#     replace $ with $$ sign for frontend auth
+    environment:
+      CF_API_EMAIL: email 
+      CF_API_KEY: api_key
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+      - ${PWD}/traefik.toml:/etc/traefik/traefik.toml
+      - ${PWD}/acme.json:/acme.json
+#     acme.json needs to have 0600 permissions.
+      - ${PWD}/services-on-host.toml:/services-on-host.toml
+#     set correct timezone for logs
+      - /etc/timezone:/etc/timezone:ro
+      - /etc/localtime:/etc/localtime:ro
+      - ${PWD}/.tmp/:/tmp/
+    ports:
+      - 80:80
+      - 443:443
+      - 8080:8080 
+    restart: always
+
+# NginX
+  nginx:
+    image: nginx:alpine
+    container_name: nginx 
+    labels:
+      - traefik.frontend.rule=Host:www.breakingbottles.com,breakingbottles.com
+
+      - traefik.port=80
+      - traefik.enable=true
+      - traefik.backend=nginx
+     - traefik.frontend.auth.basic.users=admin:$$2y$$05$$VJJiJnFrDtVeihkaD3StquFTcxPoSxCX1523eQEqcK9WrJUNaVyaK
+    volumes:
+      - ${PWD}/index.html:/usr/share/nginx/html/index.html
+    restart: always
+
+# # Deluge
+  # deluge:
+    # image: linuxserver/deluge
+    # container_name: deluge
+    # labels:
+      # - traefik.frontend.rule=Host:torrent.breakingbottles.com
+      # - traefik.port=8112
+      # - traefik.enable=true
+      # - traefik.backend=deluge
+    # ports:
+      # - 8112:8112
+    # environment:
+      # - PUID=1000
+      # - PGID=100
+      # - TZ=America/Los_Angles
+    # volumes:
+      # - /docker/deluge/:/config
+      # - /sharedfolders/downloads/:/downloads
+      # - /usr/share/GeoIP/GeoIP.dat:/usr/share/GeoIP/GeoIP.dat
+    # restart: unless-stopped
+
+# Portainer
+  portainer:
+    image: portainer/portainer
+    container_name: portainer
+    command: -H unix:///var/run/docker.sock
+    labels:
+      - traefik.frontend.rule=Host:portainer.breakingbottles.com
+      - traefik.enable=true
+      - traefik.backend=portainer
+      - traefik.port=9000
+    ports:
+      - 9000:9000
+    environment:
+      - TZ=America/Los_Angles
+    volumes:
+      - /var/run/docker.sock:/var/run/docker.sock
+      - /docker/portainer/:/data
+    restart: always
+
+# Plex
+  plex:
+    image: linuxserver/plex
+    container_name: plex
+    labels:
+      - traefik.frontend.rule=Host:plex.breakingbottles.com
+      - traefik.enable=true
+      - traefik.backend=plex
+      - traefik.port=32400
+    ports:
+      - 32400:32400/tcp
+      - 3005:3005/tcp
+      - 8324:8324/tcp
+      - 32469:32469/tcp
+      - 1900:1900/udp
+      - 32410:32410/udp
+      - 32412:32412/udp
+      - 32413:32413/udp
+      - 32414:32414/udp
+    environment:
+      - PUID=1000
+      - PGID=100
+      - TZ=America/Los_Angles
+      - VERSION=docker
+    volumes:
+      - /docker/plex/:/config
+      - /sharedfolders/media:/data/media
+      - /docker/plex/transcode/:/transcode
+    restart: unless-stopped
+
+# Emby
+  emby:
+    image: emby/embyserver_arm32v7
+    container_name: emby
+    labels:
+      - traefik.frontend.rule=Host:emby.breakingbottles.com
+      - traefik.enable=true
+      - traefik.backend=emby
+      - traefik.port=8096
+    ports:
+      - 8096:8096
+      - 8920:8920
+    environment:
+      - UID=1000
+      - GID=100
+      - GIDLIST=44
+      - TZ=America/Los_Angles
+    devices: 
+      - /dev/dri/renderD128
+    volumes:
+      - /docker/emby/:/config
+      - /sharedfolders/media:/mnt/share1
+    restart: unless-stopped
+
+# networks should be in the end 
+networks:
+  default:
+    external:
+      name: traefik

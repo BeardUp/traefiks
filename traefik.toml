@@ -1,0 +1,53 @@
+defaultEntryPoints = ["http", "https"]
+logLevel = "INFO"
+
+[docker]
+  endpoint = "unix:///var/run/docker.sock"
+  exposedByDefault = true
+  watch = true
+
+# enabling api is not absolutely necessary, it is needed only if you need dashboard.
+[api]
+  dashboard = true
+  entrypoint = "dashboard"
+
+[entryPoints]
+  [entryPoints.http]
+  address = ":80"
+    [entryPoints.http.redirect]
+    entryPoint = "https"
+  [entryPoints.https]
+  address = ":443"
+    [entryPoints.https.tls]
+
+  [entryPoints.dashboard]
+  address = ":8080"
+#     [entryPoints.dashboard.auth.basic]
+#     users = ["user:pass"]
+#     usersFile = /etc/traefik/.htpasswd
+# disabled here, present in docker-compose file
+
+#############################
+# File configuration backend
+#############################
+# Enable file configuration backend for local services, outside docker
+
+[file]
+        filename = "services-on-host.toml"
+
+# Enable watch file changes
+        watch = true
+
+[acme]
+email = "email"
+storage = "/acme.json"
+
+#entryPoint = "https"
+#  [acme.dnsChallenge]
+#  provider = "cloudflare"
+#  delayBeforeCheck = 0
+
+[[acme.domains]]
+  main = "breakingbottles.com"
+[[acme.domains]]
+  main = "*.breakingbottles.com" 

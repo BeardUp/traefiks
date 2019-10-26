@@ -1,0 +1,22 @@
+[backends]
+  [backends.omv]
+    [backends.omv.servers.omv]
+      url = "http://192.168.0.12:81"
+#     should be local IP, not docker's
+      weight = 1
+  [backends.fancyindex]
+    [backends.fancyindex.servers.fancyindex]
+      url = "http://192.168.0.12:8888"
+      weight = 1
+
+[frontends]
+  [frontends.omv]
+    backend = "omv"
+    passHostHeader = true
+      [frontends.omv.routes.domain]
+        rule = "Host:omv.breakingbottles.com"
+  [frontends.fancyindex]
+    backend = "fancyindex"
+    passHostHeader = true
+      [frontends.fancyindex.routes.domain]
+        rule = "Host:files.breakingbottles.com"
